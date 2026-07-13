@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    /* Premium Deep Blue Canvas */
+    @apply bg-brand-900 text-white min-h-screen antialiased selection:bg-brand-400 selection:text-brand-900;
+    
+    /* Subtle Mesh Gradient to make the Glassmorphism pop */
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(28, 37, 65, 0.5), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(58, 80, 107, 0.3), transparent 25%);
+    background-attachment: fixed;
+  }
+}
+
+/* Custom Utility for perfectly frosted glass panels */
+@layer utilities {
+  .glass-panel {
+    @apply bg-glass-light backdrop-blur-xl border border-glass-border shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] rounded-2xl;
+  }
+}

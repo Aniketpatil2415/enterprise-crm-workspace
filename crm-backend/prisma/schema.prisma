@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Workspace (The Paying Company/Tenant)
+model Workspace {
+  id                 String   @id @default(uuid())
+  tenantUid          String   @unique 
+  name               String
+  domain             String?
+  subscriptionPlan   PlanType @default(FREE)
+  subscriptionStatus Status   @default(ACTIVE)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  users User[]
+  leads Lead[]
+
+  @@index([tenantUid])
+}
+
+// 2. Users (The Agents/Owners logging into the CRM)
+model User {
+  id          String   @id @default(uuid())
+  firebaseUid String   @unique 
+  workspaceId String
+  email       String   @unique
+  fullName    String
+  role        Role     @default(AGENT)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  lastLoginAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdLeads Lead[]
+
+  @@index([workspaceId])
+}
+
+// 3. Leads (The Core CRM Data)
+model Lead {
+  id              String     @id @default(uuid())
+  workspaceId     String
+  createdByUserId String
+  firstName       String
+  lastName        String?
+  email           String?
+  phone           String?
+  status          LeadStatus @default(NEW)
+  source          String     @default("MANUAL")
+  isDeleted       Boolean    @default(false) 
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdByUserId], references: [id])
+
+  @@index([workspaceId])
+  @@index([status])
+}
+
+enum PlanType {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum Status {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+}
+
+enum Role {
+  OWNER
+  MANAGER
+  AGENT
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  WON
+  LOST
+}

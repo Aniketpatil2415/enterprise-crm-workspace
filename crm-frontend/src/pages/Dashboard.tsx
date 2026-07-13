@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { 
-  LayoutDashboard, Users, Settings, LogOut, Bell, Search,
+  LayoutDashboard, Settings, LogOut, Bell, Search,
   KanbanSquare, Plus, Loader2, Phone, Mail, Calendar, List
 } from 'lucide-react';
 import axios from 'axios';
@@ -249,7 +249,7 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="h-full absolute inset-0">
-                  <KanbanBoard leads={leads} onLeadsUpdated={fetchLeads} />
+                  <KanbanBoard leads={leads} setLeads={setLeads} onLeadsUpdated={fetchLeads} />
                 </div>
               )
             ) : (

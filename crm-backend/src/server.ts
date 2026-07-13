@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
+import leadRoutes from './routes/leadRoutes'; // सही जगह पर इम्पोर्ट
 
 // Load Environment Variables
 dotenv.config();
@@ -13,31 +14,32 @@ const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
 // Enterprise Security Middlewares
-app.use(helmet()); // Protects against common web vulnerabilities
+app.use(helmet()); 
 app.use(cors({
-  origin: '*', // We will restrict this to your Vercel frontend URL later
+  origin: 'http://localhost:5173', // Strictly allowing only your frontend
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 }));
 
 // Request Parsers & Loggers
-app.use(express.json()); // Allows us to accept JSON data
-app.use(morgan('dev')); // Logs API requests in the terminal
+app.use(express.json());
+app.use(morgan('dev'));
 
-// Health Check Route (To verify server is running)// Health Check Route (To verify server is running)
+// Health Check Route
 app.get('/api/health', (req: Request, res: Response) => {
-  res.status(200).json({
-    success: true,
-    message: 'Fusion Byte CRM API is running optimally.',
-    timestamp: new Date().toISOString()
-  });
+    res.status(200).json({
+        success: true,
+        message: 'Fusion Byte CRM API is running optimally.',
+        timestamp: new Date().toISOString()
+    });
 });
 
-// 👇 इसे Health Check वाले ब्लॉक के बाहर रखना है
+// API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/leads', leadRoutes); // नया लीड्स राउट
 
 // Start the Server
 app.listen(PORT, () => {
-  console.log(`✅ CRM Nexus Core Backend listening on port ${PORT}`);
-  console.log(`🔍 Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`✅ CRM Nexus Core Backend listening on port ${PORT}`);
+    console.log(`🔍 Health Check: http://localhost:${PORT}/api/health`);
 });

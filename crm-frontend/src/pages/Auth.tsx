@@ -3,10 +3,12 @@ import { Building2, Mail, User, ShieldCheck, Lock, Loader2 } from 'lucide-react'
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function Auth() {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     workspaceName: '',
     fullName: '',
@@ -42,9 +44,13 @@ export default function Auth() {
       });
 
       if (response.data.success) {
-        toast.success(`Welcome to Fusion Byte CRM! Workspace UID: ${response.data.data.workspace.tenantUid}`);
-        // TODO: Next phase we will redirect user to their dashboard
-      }
+  toast.success(`Welcome to Fusion Byte CRM! Workspace UID: ${response.data.data.workspace.tenantUid}`);
+  
+  // The missing piece: Redirect the user to their new dashboard!
+  setTimeout(() => {
+    navigate('/dashboard');
+  }, 1000); // 1 second delay so they can see the success toast
+}
     } catch (error: any) {
       console.error(error);
       const message = error.response?.data?.message || error.message || 'Registration failed.';

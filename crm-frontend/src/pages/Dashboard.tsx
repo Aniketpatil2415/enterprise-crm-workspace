@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
+
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import AnalyticsOverview from '../components/glass/AnalyticsOverview';
 import { 
   LogOut, 
   Search, 
@@ -208,6 +210,9 @@ export default function Dashboard() {
               )}
 
               {/* TAB 2: OVERVIEW (Analytics) */}
+{activeTab === 'overview' && (
+  <AnalyticsOverview leads={filteredLeads} />
+)}
               {activeTab === 'overview' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

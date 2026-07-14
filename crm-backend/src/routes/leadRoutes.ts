@@ -1,15 +1,20 @@
 import { Router } from 'express';
-import { createLead, getLeads, updateLeadStatus } from '../controllers/leadController';
 import { requireAuth } from '../middlewares/requireAuth';
+import { 
+    createLead, 
+    getLeads, 
+    updateLeadStatus, 
+    deleteLead 
+} from '../controllers/leadController';
 
 const router = Router();
 
-// Enterprise Rule: Every single route in this file must pass through the security middleware first
+// Apply Firebase Authentication middleware to all lead routes
 router.use(requireAuth);
 
-// Endpoints
-router.post('/', createLead); // POST /api/leads
-router.get('/', getLeads);    // GET /api/leads
+router.post('/', createLead);
+router.get('/', getLeads);
 router.patch('/:id/status', updateLeadStatus);
+router.delete('/:id', deleteLead); // The fully exported Soft-Delete route
 
 export default router;

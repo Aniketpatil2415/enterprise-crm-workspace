@@ -30,6 +30,26 @@ export class LeadService {
             }
         });
     }
+    /**
+     * ENTERPRISE SOFT-DELETE: Never permanently delete data. 
+     * Flag it as deleted so it can be audited or restored later.
+     */
+    static async softDeleteLead(workspaceId: string, leadId: string) {
+        // First, verify the lead exists and belongs to this exact workspace
+        const existingLead = await prisma.lead.findFirst({
+            where: { id: leadId, workspaceId: workspaceId, isDeleted: false }
+        });
+
+        if (!existingLead) {
+            throw new Error('Lead not found, already deleted, or unauthorized access.');
+        }
+
+        // Perform the soft delete
+        return await prisma.lead.update({
+            where: { id: leadId },
+            data: { isDeleted: true }
+        });
+    }
 
     /**
      * READ: Fetches ONLY active leads for a specific workspace.

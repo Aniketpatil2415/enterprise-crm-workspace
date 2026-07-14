@@ -5,7 +5,8 @@ import { auth } from '../../lib/firebase';
 import axios from 'axios';
 import { 
   LayoutDashboard, Building2, Users, Target, LogOut, 
-  Search, Bell, CheckSquare, Loader2, X, Settings as SettingsIcon
+  Search, Bell, CheckSquare, Loader2, X, Settings as SettingsIcon,
+  Code2
 } from 'lucide-react';
 
 interface SearchResults {
@@ -34,6 +35,7 @@ export default function Layout() {
   };
 
   const navItems = [
+    { name: 'API & Webhooks', path: '/api-keys', icon: Code2 },
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Companies', path: '/companies', icon: Building2 },
     { name: 'Contacts', path: '/contacts', icon: Users },

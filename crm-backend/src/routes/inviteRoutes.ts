@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { requireAuth } from '../middlewares/requireAuth';
-import { generateInviteLink } from '../controllers/inviteController';
+import { generateInviteLink, verifyInviteToken } from '../controllers/inviteController';
 
 const router = Router();
 
-// Secure route: Only logged-in users (checked further for ADMIN/OWNER in controller)
-router.use(requireAuth);
+// PUBLIC ROUTE: Anyone clicking the link can verify it
+router.get('/verify/:token', verifyInviteToken);
 
+// SECURE ROUTE: Only logged-in Admins/Owners can generate links
+router.use(requireAuth);
 router.post('/', generateInviteLink);
 
 export default router;

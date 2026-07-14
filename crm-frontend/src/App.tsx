@@ -4,16 +4,17 @@ import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { Loader2 } from 'lucide-react';
-import Tasks from './pages/Tasks'; // 🔥 NEW IMPORT
-import Settings from './pages/Settings';
 
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Companies from './pages/Companies';
 import Contacts from './pages/Contacts';
-import Deals from './pages/Deals'; // 🔥 FIX: Imported Deals Component
-import Landing from './pages/Landing';
-import Layout from './components/glass/Layout'; // OUR NEW GLOBAL LAYOUT
+import Deals from './pages/Deals';
+import Tasks from './pages/Tasks';
+import Settings from './pages/Settings';
+import JoinWorkspace from './pages/JoinWorkspace';
+import ApiKeys from './pages/ApiKeys'; // PHASE 6 IMPORT
+import Layout from './components/glass/Layout';
 
 function App() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -37,26 +38,25 @@ function App() {
 
   return (
     <>
-      <Toaster position="top-right" toastOptions={{ 
+      <Toaster position="top-right" toastOptions={{
         className: 'bg-brand-800 text-white border border-glass-border',
         style: { background: '#1e293b', color: '#fff' }
       }} />
       <Router>
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={!isAuthenticated ? <Auth /> : <Navigate to="/dashboard" />} />
-          
+          <Route path="/" element={<Auth />} />
+          <Route path="/join" element={<JoinWorkspace />} />
+
           {/* PROTECTED ENTERPRISE ROUTES (Wrapped in Global Layout) */}
           {isAuthenticated && (
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/companies" element={<Companies />} />
               <Route path="/contacts" element={<Contacts />} />
-              <Route path="/deals" element={<Deals />} /> {/* 🔥 FIX: Registered Deals Route */}
-              <Route path="/tasks" element={<Tasks />} /> {/* 🔥 NEW ROUTE */}
+              <Route path="/deals" element={<Deals />} />
+              <Route path="/tasks" element={<Tasks />} />
               <Route path="/settings" element={<Settings />} />
-              
-              {/* Fallback to dashboard if route not found inside Layout */}
+              <Route path="/api-keys" element={<ApiKeys />} /> {/* PHASE 6 ROUTE */}
               <Route path="*" element={<Navigate to="/dashboard" />} />
             </Route>
           )}

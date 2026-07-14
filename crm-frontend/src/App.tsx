@@ -4,15 +4,19 @@ import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { Loader2 } from 'lucide-react';
+
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
+import Companies from './pages/Companies';
+import Contacts from './pages/Contacts';
+import Deals from './pages/Deals'; // 🔥 FIX: Imported Deals Component
 import Landing from './pages/Landing';
+import Layout from './components/glass/Layout'; // OUR NEW GLOBAL LAYOUT
 
 function App() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Global Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAuthenticated(!!user);
@@ -39,7 +43,22 @@ function App() {
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth" element={!isAuthenticated ? <Auth /> : <Navigate to="/dashboard" />} />
-          <Route path="/dashboard" element={isAuthenticated ? <Dashboard /> : <Navigate to="/auth" />} />
+          
+          {/* PROTECTED ENTERPRISE ROUTES (Wrapped in Global Layout) */}
+          {isAuthenticated && (
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/companies" element={<Companies />} />
+              <Route path="/contacts" element={<Contacts />} />
+              <Route path="/deals" element={<Deals />} /> {/* 🔥 FIX: Registered Deals Route */}
+              
+              {/* Fallback to dashboard if route not found inside Layout */}
+              <Route path="*" element={<Navigate to="/dashboard" />} />
+            </Route>
+          )}
+
+          {/* Fallback for Unauthenticated Users */}
+          {!isAuthenticated && <Route path="*" element={<Navigate to="/" />} />}
         </Routes>
       </Router>
     </>

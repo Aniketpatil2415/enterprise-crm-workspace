@@ -2,19 +2,23 @@ import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes';
 import leadRoutes from './routes/leadRoutes';
+import companyRoutes from './routes/companyRoutes';
+import contactRoutes from './routes/contactRoutes';
+import dealRoutes from './routes/dealRoutes';
 
 const app = express();
 
-// SECURITY & PARSING MIDDLEWARES
-app.use(cors()); // Allows your React frontend (port 5173) to talk to this backend
-app.use(express.json()); // Allows Express to read the POST/PATCH JSON data
+app.use(cors());
+app.use(express.json());
 
-// ENTERPRISE ROUTES
+// 🔥 ENTERPRISE ROUTES: Strict matching to prevent cross-wiring
 app.use('/api/auth', authRoutes);
 app.use('/api/leads', leadRoutes);
+app.use('/api/companies', companyRoutes); // Must ONLY point to companyRoutes
+app.use('/api/contacts', contactRoutes);   // Must ONLY point to contactRoutes
+app.use('/api/deals', dealRoutes);
 
-// START THE ENGINE
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`✅ CRM Nexus Core Backend listening on port ${PORT}`);
+    console.log(`CRM Nexus Core Backend listening on port ${PORT}`);
 });

@@ -1,3 +1,7 @@
+// ============================================================================
+// FUSION BYTE CRM - ENTERPRISE DATABASE SCHEMA (PHASE 2: RELATIONAL WEB)
+// ============================================================================
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,80 +11,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 1. Workspace (The Paying Company/Tenant)
-model Workspace {
-  id                 String   @id @default(uuid())
-  tenantUid          String   @unique 
-  name               String
-  domain             String?
-  subscriptionPlan   PlanType @default(FREE)
-  subscriptionStatus Status   @default(ACTIVE)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  users User[]
-  leads Lead[]
-
-  @@index([tenantUid])
-}
-
-// 2. Users (The Agents/Owners logging into the CRM)
-model User {
-  id          String   @id @default(uuid())
-  firebaseUid String   @unique 
-  workspaceId String
-  email       String   @unique
-  fullName    String
-  role        Role     @default(AGENT)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  lastLoginAt DateTime?
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdLeads Lead[]
-
-  @@index([workspaceId])
-}
-
-// 3. Leads (The Core CRM Data)
-model Lead {
-  id              String     @id @default(uuid())
-  workspaceId     String
-  createdByUserId String
-  firstName       String
-  lastName        String?
-  email           String?
-  phone           String?
-  status          LeadStatus @default(NEW)
-  order           Int        @default(0)     // 🔥 The only new field we needed
-  source          String     @default("MANUAL")
-  isDeleted       Boolean    @default(false)
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User      @relation(fields: [createdByUserId], references: [id])
-
-  @@index([workspaceId])
-  @@index([status])
-}
-
-enum PlanType {
-  FREE
-  PRO
-  ENTERPRISE
-}
-
-enum Status {
-  ACTIVE
-  CANCELED
-  PAST_DUE
-}
+// ==========================================
+// ENUMS (Strict State Machines)
+// ==========================================
 
 enum Role {
   OWNER
-  MANAGER
-  AGENT
+  ADMIN
+  MEMBER
 }
 
 enum LeadStatus {
@@ -90,4 +28,197 @@ enum LeadStatus {
   PROPOSAL
   WON
   LOST
+}
+
+enum DealStage {
+  DISCOVERY
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// ==========================================
+// CORE TENANT ARCHITECTURE
+// ==========================================
+
+model Workspace {
+  id          String   @id @default(uuid())
+  tenantUid   String   @unique 
+  name        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt // THE FIX
+
+  // Relational Web (Everything belongs to the Workspace)
+  users       User[]
+  leads       Lead[]
+  companies   Company[]
+  contacts    Contact[]
+  deals       Deal[]
+  tasks       Task[]
+
+  @@index([tenantUid])
+}
+
+model User {
+  id            String    @id @default(uuid())
+  workspaceId   String
+  firebaseUid   String    @unique
+  email         String    @unique
+  fullName      String
+  role          Role      @default(MEMBER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @default(now()) @updatedAt // THE FIX
+
+  // Relationships
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdLeads  Lead[]    @relation("UserToLead")
+  ownedDeals    Deal[]    @relation("UserToDeal")
+  assignedTasks Task[]    @relation("UserToTask")
+
+  @@index([workspaceId])
+  @@index([firebaseUid])
+}
+
+// ==========================================
+// PHASE 1: PIPELINE ENGINE (Updated)
+// ==========================================
+
+model Lead {
+  id              String     @id @default(uuid())
+  workspaceId     String
+  createdByUserId String
+  firstName       String
+  lastName        String?
+  email           String?
+  phone           String?
+  status          LeadStatus @default(NEW)
+  order           Int        @default(0)
+  source          String     @default("MANUAL")
+
+  // Enterprise Soft Delete
+  isDeleted Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation("UserToLead", fields: [createdByUserId], references: [id])
+
+  @@index([workspaceId])
+  @@index([status])
+}
+
+// ==========================================
+// PHASE 2: THE RELATIONAL WEB
+// ==========================================
+
+model Company {
+  id          String  @id @default(uuid())
+  workspaceId String
+  name        String
+  industry    String?
+  website     String?
+  address     String?
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contacts  Contact[]
+  deals     Deal[]
+
+  @@index([workspaceId])
+}
+
+model Contact {
+  id          String  @id @default(uuid())
+  workspaceId String
+  companyId   String? // Optional: A contact might not belong to a company yet
+  firstName   String
+  lastName    String?
+  email       String?
+  phone       String?
+  title       String? // Job Title (e.g., CTO, Manager)
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  deals     Deal[]
+
+  @@index([workspaceId])
+  @@index([companyId])
+}
+
+model Deal {
+  id                String    @id @default(uuid())
+  workspaceId       String
+  companyId         String?
+  contactId         String?
+  ownerId           String // The User managing this deal
+  title             String // e.g., "$10k Software Contract"
+  value             Float     @default(0.0)
+  stage             DealStage @default(DISCOVERY)
+  expectedCloseDate DateTime?
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  owner     User      @relation("UserToDeal", fields: [ownerId], references: [id])
+  tasks     Task[]
+
+  @@index([workspaceId])
+  @@index([ownerId])
+  @@index([stage])
+}
+
+model Task {
+  id          String       @id @default(uuid())
+  workspaceId String
+  assigneeId  String // The User assigned to this task
+  dealId      String? // Optional: Task can be linked to a specific deal
+  title       String
+  description String?      @db.Text
+  status      TaskStatus   @default(PENDING)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignee  User      @relation("UserToTask", fields: [assigneeId], references: [id])
+  deal      Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([assigneeId])
+  @@index([dealId])
 }

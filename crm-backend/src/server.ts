@@ -7,6 +7,7 @@ import contactRoutes from './routes/contactRoutes';
 import dealRoutes from './routes/dealRoutes';
 import taskRoutes from './routes/taskRoutes';
 import searchRoutes from './routes/searchRoutes';
+import noteRoutes from './routes/noteRoutes';
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use('/api/contacts', contactRoutes);   // Must ONLY point to contactRoutes
 app.use('/api/deals', dealRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/notes', noteRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

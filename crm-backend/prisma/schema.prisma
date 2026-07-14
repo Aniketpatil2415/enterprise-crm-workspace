@@ -1,6 +1,6 @@
-// ============================================================================
-// FUSION BYTE CRM - ENTERPRISE DATABASE SCHEMA (PHASE 2: RELATIONAL WEB)
-// ============================================================================
+//
+// FUSION BYTE CRM ENTERPRISE DATABASE SCHEMA (PHASE 4: AUDIT ENGINE)
+//
 
 generator client {
   provider = "prisma-client-js"
@@ -55,47 +55,49 @@ enum TaskPriority {
 // ==========================================
 
 model Workspace {
-  id          String   @id @default(uuid())
-  tenantUid   String   @unique 
-  name        String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt // THE FIX
+  id        String   @id @default(uuid())
+  tenantUid String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
-  // Relational Web (Everything belongs to the Workspace)
-  users       User[]
-  leads       Lead[]
-  companies   Company[]
-  contacts    Contact[]
-  deals       Deal[]
-  tasks       Task[]
+  // Relational Web
+  users     User[]
+  leads     Lead[]
+  companies Company[]
+  contacts  Contact[]
+  deals     Deal[]
+  tasks     Task[]
+  notes     Note[]
 
   @@index([tenantUid])
 }
 
 model User {
-  id            String    @id @default(uuid())
-  workspaceId   String
-  firebaseUid   String    @unique
-  email         String    @unique
-  fullName      String
-  role          Role      @default(MEMBER)
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt // THE FIX
+  id          String   @id @default(uuid())
+  workspaceId String
+  firebaseUid String   @unique
+  email       String   @unique
+  fullName    String
+  role        Role     @default(MEMBER)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   // Relationships
   workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdLeads  Lead[]    @relation("UserToLead")
   ownedDeals    Deal[]    @relation("UserToDeal")
   assignedTasks Task[]    @relation("UserToTask")
+  createdNotes  Note[]    @relation("UserToNote")
 
   @@index([workspaceId])
   @@index([firebaseUid])
 }
 
 // ==========================================
-// PHASE 1: PIPELINE ENGINE (Updated)
+// PHASE 1: PIPELINE ENGINE
 // ==========================================
 
 model Lead {
@@ -109,16 +111,15 @@ model Lead {
   status          LeadStatus @default(NEW)
   order           Int        @default(0)
   source          String     @default("MANUAL")
-
-  // Enterprise Soft Delete
-  isDeleted Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  
+  isDeleted       Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
 
   // Relationships
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User      @relation("UserToLead", fields: [createdByUserId], references: [id])
+  workspace       Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy       User       @relation("UserToLead", fields: [createdByUserId], references: [id])
+  notes           Note[]
 
   @@index([workspaceId])
   @@index([status])
@@ -129,43 +130,45 @@ model Lead {
 // ==========================================
 
 model Company {
-  id          String  @id @default(uuid())
+  id          String   @id @default(uuid())
   workspaceId String
   name        String
   industry    String?
   website     String?
   address     String?
-
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   // Relationships
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  contacts  Contact[]
-  deals     Deal[]
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contacts    Contact[]
+  deals       Deal[]
+  notes       Note[]
 
   @@index([workspaceId])
 }
 
 model Contact {
-  id          String  @id @default(uuid())
+  id          String   @id @default(uuid())
   workspaceId String
-  companyId   String? // Optional: A contact might not belong to a company yet
+  companyId   String?  
   firstName   String
   lastName    String?
   email       String?
   phone       String?
-  title       String? // Job Title (e.g., CTO, Manager)
-
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  title       String?  
+  
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   // Relationships
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  deals     Deal[]
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  deals       Deal[]
+  notes       Note[]
 
   @@index([workspaceId])
   @@index([companyId])
@@ -176,49 +179,91 @@ model Deal {
   workspaceId       String
   companyId         String?
   contactId         String?
-  ownerId           String // The User managing this deal
-  title             String // e.g., "$10k Software Contract"
+  ownerId           String    
+  title             String    
   value             Float     @default(0.0)
   stage             DealStage @default(DISCOVERY)
   expectedCloseDate DateTime?
-
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  
+  isDeleted         Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now()) @updatedAt
 
   // Relationships
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  contact   Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  owner     User      @relation("UserToDeal", fields: [ownerId], references: [id])
-  tasks     Task[]
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  company           Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contact           Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  owner             User      @relation("UserToDeal", fields: [ownerId], references: [id])
+  tasks             Task[]
+  notes             Note[]
 
   @@index([workspaceId])
   @@index([ownerId])
   @@index([stage])
 }
 
+// ==========================================
+// PHASE 3: THE ACTION ENGINE (TASKS)
+// ==========================================
+
 model Task {
   id          String       @id @default(uuid())
   workspaceId String
-  assigneeId  String // The User assigned to this task
-  dealId      String? // Optional: Task can be linked to a specific deal
+  assigneeId  String
+  dealId      String?
   title       String
   description String?      @db.Text
   status      TaskStatus   @default(PENDING)
   priority    TaskPriority @default(MEDIUM)
   dueDate     DateTime?
-
-  isDeleted Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  
+  isDeleted   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
 
   // Relationships
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  assignee  User      @relation("UserToTask", fields: [assigneeId], references: [id])
-  deal      Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignee    User         @relation("UserToTask", fields: [assigneeId], references: [id])
+  deal        Deal?        @relation(fields: [dealId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId])
   @@index([assigneeId])
+  @@index([dealId])
+}
+
+// ==========================================
+// PHASE 4: THE AUDIT & NOTES ENGINE (NEW)
+// ==========================================
+
+model Note {
+  id              String   @id @default(uuid())
+  workspaceId     String
+  createdByUserId String
+  content         String   @db.Text
+  isSystem        Boolean  @default(false) // If true, it's an auto-generated audit log
+  
+  // Polymorphic Links (Can belong to any ONE of these)
+  leadId          String?
+  companyId       String?
+  contactId       String?
+  dealId          String?
+
+  isDeleted       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  // Relationships
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy       User      @relation("UserToNote", fields: [createdByUserId], references: [id])
+  
+  lead            Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  company         Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact         Contact?  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  deal            Deal?     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([leadId])
+  @@index([companyId])
+  @@index([contactId])
   @@index([dealId])
 }

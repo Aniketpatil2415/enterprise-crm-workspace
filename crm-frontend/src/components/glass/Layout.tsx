@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../lib/firebase';
-import { LayoutDashboard, Building2, Users, Target, LogOut, Search, Bell } from 'lucide-react'; // 🔥 FIX: Changed Logout to LogOut
+import { LayoutDashboard, Building2, Users, Target, LogOut, Search, Bell, CheckSquare } from 'lucide-react'; // 🔥 FIX: Changed Logout to LogOut
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -16,8 +16,10 @@ export default function Layout() {
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Companies', path: '/companies', icon: Building2 },
     { name: 'Contacts', path: '/contacts', icon: Users },
-    { name: 'Deals & Revenue', path: '/deals', icon: Target }, // 🔥 FIX: Added Deals Navigation Button
+    { name: 'Deals & Revenue', path: '/deals', icon: Target },
+    { name: 'Tasks', path: '/tasks', icon: CheckSquare }, // 🔥 NEW
   ];
+  // (Don't forget to import CheckSquare from 'lucide-react' at the top)
 
   return (
     <div className="flex h-screen bg-brand-900 text-white overflow-hidden">

@@ -20,15 +20,16 @@ const COLORS = {
 };
 
 export default function AnalyticsOverview({ leads }: AnalyticsOverviewProps) {
-  // Complex calculations handled smoothly via useMemo to prevent re-renders
-  const { stats, pipelineData, revenueTrend } = useMemo(() => {
+  
+  // 100% REAL DATA PROCESSING (No Dummy Data)
+  const { stats, pipelineData, dynamicTrend } = useMemo(() => {
     const total = leads.length;
     const won = leads.filter(l => l.status === 'WON').length;
     const lost = leads.filter(l => l.status === 'LOST').length;
     const active = total - won - lost;
     const winRate = total > 0 ? Math.round((won / total) * 100) : 0;
 
-    // Pipeline Distribution for Bar Chart
+    // Pipeline Distribution (Real-time count)
     const pipelineData = [
       { name: 'New', count: leads.filter(l => l.status === 'NEW').length, color: COLORS.NEW },
       { name: 'Contacted', count: leads.filter(l => l.status === 'CONTACTED').length, color: COLORS.CONTACTED },
@@ -38,29 +39,43 @@ export default function AnalyticsOverview({ leads }: AnalyticsOverviewProps) {
       { name: 'Lost', count: lost, color: COLORS.LOST },
     ];
 
-    // Simulating Revenue/Lead Trend for Area Chart based on actual data length
-    // In a real app, this groups by createdAt dates. Here we mock a steady growth curve scaling with your data.
-    const baseMultiplier = total > 0 ? total : 1;
-    const revenueTrend = [
-      { name: 'Jan', leads: Math.max(1, Math.floor(baseMultiplier * 0.2)) },
-      { name: 'Feb', leads: Math.max(2, Math.floor(baseMultiplier * 0.4)) },
-      { name: 'Mar', leads: Math.max(3, Math.floor(baseMultiplier * 0.5)) },
-      { name: 'Apr', leads: Math.max(5, Math.floor(baseMultiplier * 0.8)) },
-      { name: 'May', leads: Math.max(6, Math.floor(baseMultiplier * 1.2)) },
-      { name: 'Jun', leads: total },
-    ];
+    // DYNAMIC TIME-SERIES ENGINE: Grouping real leads by exact creation date
+    const trendMap = new Map<string, number>();
+    
+    // Sort leads chronologically
+    const sortedLeads = [...leads].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-    return { stats: { total, won, active, winRate }, pipelineData, revenueTrend };
+    sortedLeads.forEach(lead => {
+      const date = new Date(lead.createdAt);
+      // Formatting date as "Jul 14" for clean X-Axis labels
+      const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      trendMap.set(label, (trendMap.get(label) || 0) + 1);
+    });
+
+    let dynamicTrend = Array.from(trendMap.entries()).map(([name, count]) => ({
+      name,
+      leads: count
+    }));
+
+    // UX Fallback: If there's only 1 day of data, add a 0-baseline so the AreaChart renders a curve, not a dot.
+    if (dynamicTrend.length === 1) {
+       dynamicTrend.unshift({ name: 'Start', leads: 0 });
+    } else if (dynamicTrend.length === 0) {
+       // If completely empty, show an empty state structure
+       dynamicTrend = [{ name: 'No Data', leads: 0 }];
+    }
+
+    return { stats: { total, won, active, winRate }, pipelineData, dynamicTrend };
   }, [leads]);
 
-  // Custom Tooltip for Premium Dark Theme Look
+  // Premium Dark Theme Tooltip
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-brand-900/90 border border-glass-border p-4 rounded-xl shadow-2xl backdrop-blur-md">
-          <p className="text-gray-300 font-semibold mb-1">{label}</p>
-          <p className="text-brand-400 font-bold text-lg">
-            {payload[0].value} Leads
+        <div className="bg-brand-900/95 border border-glass-border p-4 rounded-xl shadow-2xl backdrop-blur-xl">
+          <p className="text-gray-400 font-semibold mb-1 text-xs uppercase tracking-wider">{label}</p>
+          <p className="text-brand-400 font-bold text-xl">
+            {payload[0].value} {payload[0].value === 1 ? 'Lead' : 'Leads'}
           </p>
         </div>
       );
@@ -70,7 +85,7 @@ export default function AnalyticsOverview({ leads }: AnalyticsOverviewProps) {
 
   return (
     <div className="space-y-6 fade-in">
-      {/* Top Stats Cards */}
+      {/* Top Actionable Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="glass-panel p-6 border border-glass-border rounded-xl hover:border-brand-500/50 transition-colors">
           <div className="flex items-center justify-between mb-4">
@@ -105,26 +120,26 @@ export default function AnalyticsOverview({ leads }: AnalyticsOverviewProps) {
         </div>
       </div>
 
-      {/* Charts Section */}
+      {/* Deep Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* Growth Trend Area Chart */}
+        {/* Real-time Growth Area Chart */}
         <div className="glass-panel p-6 border border-glass-border rounded-xl flex flex-col h-96">
-          <h3 className="text-lg font-bold text-white mb-6">Lead Generation Trend</h3>
+          <h3 className="text-lg font-bold text-white mb-6">Actual Lead Generation Timeline</h3>
           <div className="flex-1 w-full h-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={dynamicTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#5BC0BE" stopOpacity={0.3}/>
+                    <stop offset="5%" stopColor="#5BC0BE" stopOpacity={0.4}/>
                     <stop offset="95%" stopColor="#5BC0BE" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1C2541" vertical={false} />
                 <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
                 <RechartsTooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="leads" stroke="#5BC0BE" strokeWidth={3} fillOpacity={1} fill="url(#colorLeads)" />
+                <Area type="monotone" dataKey="leads" stroke="#5BC0BE" strokeWidth={3} fillOpacity={1} fill="url(#colorLeads)" animationDuration={1000} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -138,9 +153,9 @@ export default function AnalyticsOverview({ leads }: AnalyticsOverviewProps) {
               <BarChart data={pipelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1C2541" vertical={false} />
                 <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
                 <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: '#1C2541', opacity: 0.4 }} />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={50}>
+                <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={50} animationDuration={1000}>
                   {pipelineData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}

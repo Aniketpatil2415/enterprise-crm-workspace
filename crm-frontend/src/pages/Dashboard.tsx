@@ -20,7 +20,9 @@ export default function Dashboard() {
   const [deals, setDeals] = useState<DealOverview[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'pipeline' | 'table' | 'settings'>('overview'); // Set Overview as default for analytics
+  
+  // 🔥 FIX: Removed 'settings' from the state
+  const [activeTab, setActiveTab] = useState<'overview' | 'pipeline' | 'table'>('overview'); 
 
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -37,7 +39,6 @@ export default function Dashboard() {
       const currentUser = auth.currentUser;
       if (!currentUser) return;
 
-      // 🔥 Fetching both Leads and Deals simultaneously for Deep Analytics
       const [leadsRes, dealsRes] = await Promise.all([
         axios.get(`${API_URL}/leads`, { headers: { 'x-user-id': currentUser.uid } }),
         axios.get(`${API_URL}/deals`, { headers: { 'x-user-id': currentUser.uid } })
@@ -57,7 +58,8 @@ export default function Dashboard() {
   return (
     <div className="p-8 h-full flex flex-col fade-in max-w-[1600px] mx-auto w-full">
       <div className="flex items-center gap-2 mb-6 border-b border-glass-border pb-4 overflow-x-auto custom-scrollbar shrink-0">
-        {['overview', 'pipeline', 'table', 'settings'].map(tab => (
+        {/* 🔥 FIX: Removed 'settings' from the array map */}
+        {['overview', 'pipeline', 'table'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab as any)}
@@ -74,20 +76,19 @@ export default function Dashboard() {
 
       <div className="flex justify-between items-center mb-8 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white capitalize">{activeTab}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-white capitalize">{activeTab === 'table' ? 'Leads Table' : activeTab}</h1>
           <p className="text-gray-400 text-sm mt-1">
             {activeTab === 'pipeline' && 'Drag and drop leads to update their current stage.'}
             {activeTab === 'overview' && 'Deep financial analytics and lead conversion metrics.'}
             {activeTab === 'table' && 'Detailed list view of all CRM records.'}
-            {activeTab === 'settings' && 'Manage your enterprise workspace preferences.'}
           </p>
         </div>
-        {activeTab !== 'settings' && (
-          <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 bg-brand-400 hover:bg-white text-brand-900 px-5 py-2.5 rounded-lg font-bold shadow-lg shadow-brand-400/20 transition-all">
-            <Plus className="w-5 h-5" />
-            Add New Lead
-          </button>
-        )}
+        
+        {/* 🔥 FIX: Add button is now always visible on Dashboard tabs */}
+        <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 bg-brand-400 hover:bg-white text-brand-900 px-5 py-2.5 rounded-lg font-bold shadow-lg shadow-brand-400/20 transition-all">
+          <Plus className="w-5 h-5" />
+          Add New Lead
+        </button>
       </div>
 
       {isLoading ? (
@@ -98,7 +99,6 @@ export default function Dashboard() {
         <div className="flex-1 overflow-hidden relative flex flex-col">
           {activeTab === 'pipeline' && <KanbanBoard leads={leads} setLeads={setLeads} />}
           
-          {/* 🔥 Passing Deals data into the Analytics Engine */}
           {activeTab === 'overview' && (
             <div className="overflow-y-auto h-full custom-scrollbar pb-10">
               <AnalyticsOverview leads={leads} deals={deals} />
@@ -129,9 +129,6 @@ export default function Dashboard() {
                 </table>
               </div>
             </div>
-          )}
-          {activeTab === 'settings' && (
-            <div className="glass-panel p-6 border border-glass-border rounded-xl max-w-2xl"><p className="text-gray-400">Settings coming in Phase 3.</p></div>
           )}
         </div>
       )}

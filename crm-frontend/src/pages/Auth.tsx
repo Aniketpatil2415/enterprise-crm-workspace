@@ -50,7 +50,7 @@ export default function Auth() {
       } else {
         // REGISTER FLOW
         if (!formData.name) throw new Error('Name is required for registration.');
-        const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+        await createUserWithEmailAndPassword(auth, formData.email, formData.password);
         
         // TODO: In Phase 9, we will sync this User with our Prisma MySQL database
         toast.success('Enterprise Account Created Successfully!');

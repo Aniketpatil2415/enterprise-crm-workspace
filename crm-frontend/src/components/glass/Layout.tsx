@@ -5,7 +5,7 @@ import { auth } from '../../lib/firebase';
 import axios from 'axios';
 import { 
   LayoutDashboard, Building2, Users, Target, LogOut, 
-  Search, Bell, CheckSquare, Loader2, X 
+  Search, Bell, CheckSquare, Loader2, X, Settings as SettingsIcon
 } from 'lucide-react';
 
 interface SearchResults {
@@ -39,6 +39,7 @@ export default function Layout() {
     { name: 'Contacts', path: '/contacts', icon: Users },
     { name: 'Deals & Revenue', path: '/deals', icon: Target },
     { name: 'Tasks', path: '/tasks', icon: CheckSquare },
+    { name: 'Settings', path: '/settings', icon: SettingsIcon },
   ];
 
   // Close dropdown when clicking outside

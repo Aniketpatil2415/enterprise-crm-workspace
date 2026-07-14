@@ -5,6 +5,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { Loader2 } from 'lucide-react';
 import Tasks from './pages/Tasks'; // 🔥 NEW IMPORT
+import Settings from './pages/Settings';
 
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
@@ -53,6 +54,7 @@ function App() {
               <Route path="/contacts" element={<Contacts />} />
               <Route path="/deals" element={<Deals />} /> {/* 🔥 FIX: Registered Deals Route */}
               <Route path="/tasks" element={<Tasks />} /> {/* 🔥 NEW ROUTE */}
+              <Route path="/settings" element={<Settings />} />
               
               {/* Fallback to dashboard if route not found inside Layout */}
               <Route path="*" element={<Navigate to="/dashboard" />} />

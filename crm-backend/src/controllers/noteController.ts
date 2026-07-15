@@ -4,64 +4,55 @@ import { AuthRequest } from '../middlewares/requireAuth';
 
 export const createNote = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const workspaceId = req.workspaceId!;
-        const userId = req.user.id;
-        const { content, leadId, companyId, contactId, dealId, isSystem } = req.body;
+        if (!req.user || !req.user.workspaceId) {
+            res.status(401).json({ success: false, message: 'Fatal: Workspace context missing.' });
+            return;
+        }
+
+        const { content, leadId, dealId, contactId } = req.body;
 
         if (!content) {
             res.status(400).json({ success: false, message: 'Note content cannot be empty.' });
             return;
         }
 
-        const newNote = await prisma.note.create({
+        const note = await prisma.note.create({
             data: {
-                workspace: { connect: { id: workspaceId } },
-                createdBy: { connect: { id: userId } },
                 content,
-                isSystem: isSystem || false,
-                ...(leadId && { lead: { connect: { id: leadId } } }),
-                ...(companyId && { company: { connect: { id: companyId } } }),
-                ...(contactId && { contact: { connect: { id: contactId } } }),
-                ...(dealId && { deal: { connect: { id: dealId } } })
-            },
-            include: {
-                createdBy: { select: { email: true, fullName: true } }
+                workspace: { connect: { id: req.user.workspaceId } },
+                createdBy: { connect: { id: req.user.id } },
+                // Polymorphic-like connections (Connect to whichever entity was passed)
+                ...(leadId && { lead: { connect: { id: String(leadId) } } }),
+                ...(dealId && { deal: { connect: { id: String(dealId) } } }),
+                ...(contactId && { contact: { connect: { id: String(contactId) } } })
             }
         });
 
-        res.status(201).json({ success: true, message: 'Note added successfully.', data: newNote });
+        res.status(201).json({ success: true, data: note });
     } catch (error: any) {
-        console.error('[CRITICAL PRISMA ERROR] Create Note:', error);
-        res.status(500).json({ success: false, message: 'Failed to save the note.' });
+        console.error('[NOTE CREATE ERROR]', error);
+        res.status(500).json({ success: false, message: 'Failed to save note.' });
     }
 };
 
 export const getNotes = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const workspaceId = req.workspaceId!;
-        // Extract filters from query parameters
-        const { leadId, companyId, contactId, dealId } = req.query;
+        if (!req.user || !req.user.workspaceId) {
+            res.status(401).json({ success: false, message: 'Context missing.' });
+            return;
+        }
 
         const notes = await prisma.note.findMany({
-            where: {
-                workspaceId,
-                isDeleted: false,
-                ...(leadId && { leadId: leadId as string }),
-                ...(companyId && { companyId: companyId as string }),
-                ...(contactId && { contactId: contactId as string }),
-                ...(dealId && { dealId: dealId as string })
-            },
+            where: { workspaceId: req.user.workspaceId },
             include: {
-                createdBy: { select: { email: true, fullName: true } }
+                createdBy: { select: { fullName: true, email: true } }
             },
-            orderBy: {
-                createdAt: 'desc' // Newest notes first
-            }
+            orderBy: { createdAt: 'desc' }
         });
 
         res.status(200).json({ success: true, data: notes });
     } catch (error: any) {
-        console.error('[CRITICAL PRISMA ERROR] Get Notes:', error);
-        res.status(500).json({ success: false, message: 'Internal Server Error fetching notes.' });
+        console.error('[NOTE FETCH ERROR]', error);
+        res.status(500).json({ success: false, message: 'Failed to retrieve notes.' });
     }
 };

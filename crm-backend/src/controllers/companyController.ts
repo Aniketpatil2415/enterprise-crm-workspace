@@ -3,79 +3,79 @@ import { prisma } from '../lib/prisma';
 import { AuthRequest } from '../middlewares/requireAuth';
 
 export const createCompany = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const { name, industry, website, address } = req.body;
+    try {
+        if (!req.user || !req.user.workspaceId) {
+            res.status(401).json({ success: false, message: 'Fatal: Workspace context missing.' });
+            return;
+        }
 
-    console.log(`[API CREATE COMPANY] Workspace: ${workspaceId}, Name: ${name}`);
+        const { name, domain, industry, revenue } = req.body;
 
-    if (!name) {
-      res.status(400).json({ success: false, message: 'Company name is strictly required.' });
-      return;
+        if (!name) {
+            res.status(400).json({ success: false, message: 'Company name is required.' });
+            return;
+        }
+
+        const company = await prisma.company.create({
+            data: {
+                name,
+                domain: domain || '',
+                industry: industry || 'Other',
+                revenue: revenue ? parseFloat(revenue) : 0,
+                workspace: { connect: { id: req.user.workspaceId } }
+            }
+        });
+
+        res.status(201).json({ success: true, data: company });
+    } catch (error: any) {
+        console.error('[COMPANY CREATE ERROR]', error);
+        res.status(500).json({ success: false, message: 'Failed to provision company record.' });
     }
-
-    const newCompany = await prisma.company.create({
-      data: {
-        workspace: { connect: { id: workspaceId } },
-        name,
-        industry: industry || null,
-        website: website || null,
-        address: address || null,
-      }
-    });
-
-    res.status(201).json({ success: true, message: 'Enterprise Client added successfully.', data: newCompany });
-  } catch (error: any) {
-    console.error('[CRITICAL PRISMA ERROR] Create Company:', error);
-    res.status(500).json({ success: false, message: `Failed to create company. Error: ${error.message || 'Unknown'}` });
-  }
 };
 
 export const getCompanies = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const workspaceId = req.workspaceId!;
-    
-    // Fetch only active companies for this specific workspace, ordered by newest first
-    const companies = await prisma.company.findMany({
-      where: {
-        workspaceId: workspaceId,
-        isDeleted: false
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
-    
-    res.status(200).json({ success: true, data: companies });
-  } catch (error: any) {
-    console.error('[CRITICAL PRISMA ERROR] Get Companies:', error);
-    res.status(500).json({ success: false, message: 'Internal Server Error while fetching companies.' });
-  }
+    try {
+        if (!req.user || !req.user.workspaceId) {
+            res.status(401).json({ success: false, message: 'Fatal: Workspace context missing.' });
+            return;
+        }
+
+        const companies = await prisma.company.findMany({
+            where: { workspaceId: req.user.workspaceId },
+            include: {
+                // 🔥 THE FIX: Changed 'leads' to 'contacts' based on your Prisma Schema
+                _count: { select: { contacts: true, deals: true } }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.status(200).json({ success: true, data: companies });
+    } catch (error: any) {
+        console.error('[COMPANY FETCH ERROR]', error);
+        res.status(500).json({ success: false, message: 'Failed to retrieve companies.' });
+    }
 };
 
 export const deleteCompany = async (req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const workspaceId = req.workspaceId!;
-    const companyId = req.params.id as string;
+    try {
+        if (!req.user || !req.user.workspaceId) {
+            res.status(401).json({ success: false, message: 'Context missing.' });
+            return;
+        }
 
-    const existingCompany = await prisma.company.findFirst({
-      where: { id: companyId, workspaceId: workspaceId, isDeleted: false }
-    });
+        const id = String(req.params.id);
 
-    if (!existingCompany) {
-      res.status(404).json({ success: false, message: 'Company not found or unauthorized.' });
-      return;
+        const existingCompany = await prisma.company.findUnique({ where: { id } });
+        if (!existingCompany || existingCompany.workspaceId !== req.user.workspaceId) {
+            res.status(404).json({ success: false, message: 'Company not found in your workspace.' });
+            return;
+        }
+
+        await prisma.company.delete({ where: { id } });
+
+        res.status(200).json({ success: true, message: 'Company record purged.' });
+    } catch (error: any) {
+        console.error('[COMPANY DELETE ERROR]', error);
+        res.status(500).json({ success: false, message: 'Failed to delete company.' });
     }
-
-    // Enterprise Soft-Delete Mechanism: Never truly delete, just hide
-    await prisma.company.update({
-      where: { id: companyId },
-      data: { isDeleted: true }
-    });
-
-    res.status(200).json({ success: true, message: 'Company archived successfully.' });
-  } catch (error: any) {
-    console.error('[CRITICAL PRISMA ERROR] Delete Company:', error);
-    res.status(500).json({ success: false, message: 'Internal Server Error while deleting company.' });
-  }
 };

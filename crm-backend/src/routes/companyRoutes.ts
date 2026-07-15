@@ -1,15 +1,17 @@
 import { Router } from 'express';
-import { requireAuth } from '../middlewares/requireAuth';
-// 🔥 STRICT FIX: We only import Company controllers here, NOTHING ELSE.
 import { createCompany, getCompanies, deleteCompany } from '../controllers/companyController';
+import { requireAuth } from '../middlewares/requireAuth';
 
 const router = Router();
 
+// ==========================================
+// COMPANY ROUTES
+// ==========================================
+
 router.use(requireAuth);
 
-// 🔥 STRICT FIX: Ensure this is calling createCompany, NOT createContact
 router.post('/', createCompany);
 router.get('/', getCompanies);
-router.delete('/:id', deleteCompany);
+router.delete('/:id', deleteCompany); // Tied perfectly to the new delete function
 
 export default router;

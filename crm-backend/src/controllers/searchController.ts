@@ -4,86 +4,67 @@ import { AuthRequest } from '../middlewares/requireAuth';
 
 export const globalSearch = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const workspaceId = req.workspaceId!;
-        const searchQuery = req.query.q as string;
-
-        // Protection: Don't search if query is empty or too short (saves database load)
-        if (!searchQuery || searchQuery.trim().length < 2) {
-            res.status(200).json({ 
-                success: true, 
-                data: { leads: [], companies: [], contacts: [], deals: [] } 
-            });
+        // 🔥 STRICT TENANT ISOLATION
+        if (!req.user || !req.user.workspaceId) {
+            res.status(401).json({ success: false, message: 'Fatal: Workspace context missing.' });
             return;
         }
 
-        const query = searchQuery.trim();
+        const searchQuery = String(req.query.q || '').trim();
 
-        // 🔥 ENTERPRISE PERFORMANCE: Run all 4 queries concurrently using Promise.all
-        const [leads, companies, contacts, deals] = await Promise.all([
-            // 1. Search Leads
+        if (!searchQuery || searchQuery.length < 2) {
+            res.status(400).json({ success: false, message: 'Search query must be at least 2 characters long.' });
+            return;
+        }
+
+        const workspaceId = req.user.workspaceId;
+
+        // 🚀 ENTERPRISE PERFORMANCE: Parallel execution for blazing fast global search
+        const [leads, deals, companies, contacts] = await Promise.all([
             prisma.lead.findMany({
                 where: {
                     workspaceId,
-                    isDeleted: false,
                     OR: [
-                        { firstName: { contains: query } },
-                        { lastName: { contains: query } },
-                        { email: { contains: query } },
-                        { phone: { contains: query } }
+                        { firstName: { contains: searchQuery } },
+                        { lastName: { contains: searchQuery } },
+                        { email: { contains: searchQuery } }
                     ]
                 },
-                select: { id: true, firstName: true, lastName: true, email: true, status: true },
-                take: 5 // Limit results for speed
-            }),
-
-            // 2. Search Companies
-            prisma.company.findMany({
-                where: {
-                    workspaceId,
-                    isDeleted: false,
-                    OR: [
-                        { name: { contains: query } },
-                        { industry: { contains: query } }
-                    ]
-                },
-                select: { id: true, name: true, industry: true },
                 take: 5
             }),
-
-            // 3. Search Contacts
-            prisma.contact.findMany({
-                where: {
-                    workspaceId,
-                    isDeleted: false,
-                    OR: [
-                        { firstName: { contains: query } },
-                        { lastName: { contains: query } },
-                        { email: { contains: query } }
-                    ]
-                },
-                select: { id: true, firstName: true, lastName: true, title: true },
-                take: 5
-            }),
-
-            // 4. Search Deals
             prisma.deal.findMany({
                 where: {
                     workspaceId,
-                    isDeleted: false,
-                    title: { contains: query }
+                    title: { contains: searchQuery }
                 },
-                select: { id: true, title: true, value: true, stage: true },
+                take: 5
+            }),
+            prisma.company.findMany({
+                where: {
+                    workspaceId,
+                    name: { contains: searchQuery }
+                },
+                take: 5
+            }),
+            prisma.contact.findMany({
+                where: {
+                    workspaceId,
+                    OR: [
+                        { firstName: { contains: searchQuery } },
+                        { lastName: { contains: searchQuery } },
+                        { email: { contains: searchQuery } }
+                    ]
+                },
                 take: 5
             })
         ]);
 
         res.status(200).json({
             success: true,
-            data: { leads, companies, contacts, deals }
+            data: { leads, deals, companies, contacts }
         });
-
     } catch (error: any) {
-        console.error('[CRITICAL PRISMA ERROR] Global Search:', error);
-        res.status(500).json({ success: false, message: 'Internal Server Error during search execution.' });
+        console.error('[GLOBAL SEARCH ERROR]', error);
+        res.status(500).json({ success: false, message: 'Failed to execute global search query.' });
     }
 };

@@ -1,14 +1,13 @@
 import { Router } from 'express';
+import { createInvite, verifyInvite } from '../controllers/inviteController';
 import { requireAuth } from '../middlewares/requireAuth';
-import { generateInviteLink, verifyInviteToken } from '../controllers/inviteController';
 
 const router = Router();
 
-// PUBLIC ROUTE: Anyone clicking the link can verify it
-router.get('/verify/:token', verifyInviteToken);
+// PUBLIC ROUTE (No Auth Required for verification)
+router.get('/verify/:token', verifyInvite); 
 
-// SECURE ROUTE: Only logged-in Admins/Owners can generate links
-router.use(requireAuth);
-router.post('/', generateInviteLink);
+// PROTECTED ROUTE (Requires Auth to generate invites)
+router.post('/', requireAuth, createInvite);
 
 export default router;

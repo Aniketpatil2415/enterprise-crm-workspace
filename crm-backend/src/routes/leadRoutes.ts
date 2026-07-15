@@ -1,20 +1,18 @@
 import { Router } from 'express';
+import { createLead, getLeads, updateLeadStatus } from '../controllers/leadController';
 import { requireAuth } from '../middlewares/requireAuth';
-import { 
-    createLead, 
-    getLeads, 
-    updateLeadStatus, 
-    deleteLead 
-} from '../controllers/leadController';
 
 const router = Router();
 
-// Apply Firebase Authentication middleware to all lead routes
+// ==========================================
+// LEAD PIPELINE ROUTES
+// ==========================================
+
+// 🔥 TITANIUM SHIELD: All lead routes must pass through the strict auth middleware
 router.use(requireAuth);
 
 router.post('/', createLead);
 router.get('/', getLeads);
-router.patch('/:id/status', updateLeadStatus);
-router.delete('/:id', deleteLead); // The fully exported Soft-Delete route
+router.patch('/:id/status', updateLeadStatus); // This handles the drag-and-drop Kanban updates
 
 export default router;

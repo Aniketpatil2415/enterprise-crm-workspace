@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { Loader2 } from 'lucide-react';
+import GodMode from './pages/GodMode';
 
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
@@ -58,6 +59,7 @@ function App() {
               <Route path="/settings" element={<Settings />} />
               <Route path="/api-keys" element={<ApiKeys />} /> {/* PHASE 6 ROUTE */}
               <Route path="*" element={<Navigate to="/dashboard" />} />
+              <Route path="/god-mode" element={<GodMode />} />
             </Route>
           )}
 

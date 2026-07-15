@@ -18,6 +18,7 @@ import teamRoutes from './routes/teamRoutes';
 import inviteRoutes from './routes/inviteRoutes';
 import apiKeyRoutes from './routes/apiKeyRoutes'; 
 import webhookRoutes from './routes/webhookRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 const app = express();
 
@@ -71,6 +72,7 @@ app.use('/api/team', teamRoutes);
 app.use('/api/invites', inviteRoutes);
 app.use('/api/apikeys', apiKeyRoutes); 
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/admin', adminRoutes);
 
 // ==========================================
 // START THE ENGINE

@@ -5,9 +5,13 @@ import { auth } from '../../lib/firebase';
 import axios from 'axios';
 import { 
   LayoutDashboard, Building2, Users, Target, LogOut, 
-  Search, Bell, CheckSquare, Loader2, X, Settings as SettingsIcon,
-  Code2
+  Search, CheckSquare, Loader2, X, Settings as SettingsIcon,
+  Code2, Megaphone 
 } from 'lucide-react';
+
+// 🔥 Your New Enterprise Glassmorphism Components
+import NotificationBell from './NotificationBell';
+import AnnouncementModal from './AnnouncementModal';
 
 interface SearchResults {
   leads: any[];
@@ -19,6 +23,9 @@ interface SearchResults {
 export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Announcement / Broadcast State
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
   
   // Omnisearch State
   const [searchQuery, setSearchQuery] = useState('');
@@ -104,13 +111,13 @@ export default function Layout() {
       {/* GLOBAL SIDEBAR */}
       <aside className="w-64 glass-panel border-y-0 border-l-0 rounded-none flex-col z-30 hidden md:flex shrink-0">
         <div className="p-6 flex items-center gap-3 border-b border-glass-border">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-400 to-brand-600 flex items-center justify-center font-bold text-brand-900">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-400 to-brand-600 flex items-center justify-center font-bold text-brand-900 shadow-lg shadow-brand-400/20">
             FB
           </div>
           <span className="font-bold text-xl tracking-tight text-white">Fusion Byte</span>
         </div>
         
-        <nav className="flex-1 p-4 space-y-2 mt-4">
+        <nav className="flex-1 p-4 space-y-2 mt-4 custom-scrollbar overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname.startsWith(item.path);
@@ -144,11 +151,11 @@ export default function Layout() {
       <main className="flex-1 flex flex-col relative overflow-hidden">
         
         {/* GLOBAL HEADER */}
-        <header className="h-16 glass-panel border-t-0 border-l-0 border-r-0 rounded-none flex items-center justify-between px-8 sticky top-0 z-40">
+        <header className="h-16 glass-panel border-t-0 border-l-0 border-r-0 rounded-none flex items-center justify-between px-8 sticky top-0 z-40 bg-brand-900/80 backdrop-blur-md">
           
           {/* 🔍 THE OMNISEARCH BAR */}
           <div className="relative w-64 lg:w-[28rem]" ref={searchRef}>
-            <div className={`flex items-center bg-brand-900/80 border transition-all rounded-lg px-3 py-2 w-full ${isDropdownOpen ? 'border-brand-400 rounded-b-none' : 'border-glass-border focus-within:border-brand-400'}`}>
+            <div className={`flex items-center bg-black/40 border transition-all rounded-lg px-3 py-2 w-full ${isDropdownOpen ? 'border-brand-400 rounded-b-none' : 'border-white/10 focus-within:border-brand-400'}`}>
               {isSearching ? (
                 <Loader2 className="w-4 h-4 text-brand-400 mr-2 animate-spin shrink-0" />
               ) : (
@@ -173,7 +180,7 @@ export default function Layout() {
 
             {/* 🔍 THE SEARCH DROPDOWN */}
             {isDropdownOpen && searchQuery.length >= 2 && (
-              <div className="absolute top-full left-0 right-0 bg-brand-900/95 backdrop-blur-xl border border-t-0 border-brand-400/50 rounded-b-xl shadow-2xl shadow-brand-400/10 max-h-[70vh] overflow-y-auto custom-scrollbar flex flex-col z-50">
+              <div className="absolute top-full left-0 right-0 bg-[#0B0F19]/95 backdrop-blur-xl border border-t-0 border-brand-400/50 rounded-b-xl shadow-2xl shadow-brand-400/10 max-h-[70vh] overflow-y-auto custom-scrollbar flex flex-col z-50">
                 
                 {!hasResults && !isSearching && (
                   <div className="p-6 text-center text-gray-500 text-sm">
@@ -240,10 +247,19 @@ export default function Layout() {
               </span>
             </div>
 
-            <button className="p-2 text-gray-400 hover:text-white relative transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1.5 w-2 h-2 bg-brand-400 rounded-full animate-pulse"></span>
-            </button>
+            <div className="flex items-center gap-4">
+              {/* 🔥 ADMIN BROADCAST BUTTON */}
+              <button 
+                onClick={() => setIsBroadcastModalOpen(true)}
+                className="p-2 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 transition-all duration-300"
+                title="Send Broadcast"
+              >
+                <Megaphone size={18} />
+              </button>
+
+              {/* 🔥 NEW DYNAMIC NOTIFICATION BELL */}
+              <NotificationBell />
+            </div>
             
             <div className="flex items-center gap-3 border-l border-glass-border pl-6">
               <div className="text-right hidden sm:block">
@@ -262,6 +278,12 @@ export default function Layout() {
           <Outlet />
         </div>
       </main>
+
+      {/* 🔥 THE BROADCAST MODAL (Renders outside main flow) */}
+      <AnnouncementModal 
+        isOpen={isBroadcastModalOpen} 
+        onClose={() => setIsBroadcastModalOpen(false)} 
+      />
     </div>
   );
 }

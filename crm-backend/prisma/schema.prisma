@@ -309,3 +309,14 @@ model ApiKey {
   @@index([key])
   @@index([workspaceId])
 }
+// ==========================================
+// ADVANCED SAAS FEATURES
+// ==========================================
+model Announcement {
+  id          String   @id @default(uuid())
+  title       String
+  message     String
+  type        String   @default("INFO") // Types: INFO, WARNING, SUCCESS
+  targetEmail String?  // Optional: Agar kisi specific user ko warning deni ho
+  createdAt   DateTime @default(now())
+}

@@ -4,12 +4,11 @@ import { AuthRequest } from '../middlewares/requireAuth';
 
 export const createDeal = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        if (!req.user || !req.user.workspaceId) {
-            res.status(401).json({ success: false, message: 'Fatal: Workspace context missing.' });
+        if (!req.user || !req.user.workspaceId || !req.user.id) {
+            res.status(401).json({ success: false, message: 'Fatal: Workspace or User context missing.' });
             return;
         }
 
-        // 🔥 THE FIX: Replaced leadId with contactId
         const { title, value, stage, companyId, contactId } = req.body;
 
         if (!title || value === undefined) {
@@ -23,8 +22,10 @@ export const createDeal = async (req: AuthRequest, res: Response): Promise<void>
                 value: parseFloat(value),
                 stage: stage || 'PROSPECT',
                 workspace: { connect: { id: req.user.workspaceId } },
-                ...(companyId && { company: { connect: { id: companyId } } }),
-                ...(contactId && { contact: { connect: { id: contactId } } })
+                // 🔥 THE FIX: Explicitly connecting the Deal to the User who created it (owner)
+                owner: { connect: { id: req.user.id } },
+                ...(companyId && { company: { connect: { id: String(companyId) } } }),
+                ...(contactId && { contact: { connect: { id: String(contactId) } } })
             }
         });
 
@@ -46,8 +47,8 @@ export const getDeals = async (req: AuthRequest, res: Response): Promise<void> =
             where: { workspaceId: req.user.workspaceId },
             include: {
                 company: { select: { name: true } },
-                // 🔥 THE FIX: Changed 'lead' relation to 'contact' relation
-                contact: { select: { firstName: true, lastName: true } }
+                contact: { select: { firstName: true, lastName: true } },
+                owner: { select: { fullName: true, email: true } } // Added owner to response for UI
             },
             orderBy: { createdAt: 'desc' }
         });

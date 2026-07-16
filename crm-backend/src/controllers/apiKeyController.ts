@@ -3,19 +3,18 @@ import { prisma } from '../lib/prisma';
 import { AuthRequest } from '../middlewares/requireAuth';
 import crypto from 'crypto';
 
-export const generateApiKey = async (req: AuthRequest, res: Response): Promise<void> => {
+export const createApiKey = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const workspaceId = req.workspaceId!;
-        const requestingUserRole = req.user.role;
-        const { name } = req.body;
-
-        if (requestingUserRole !== 'OWNER' && requestingUserRole !== 'ADMIN') {
-            res.status(403).json({ success: false, message: 'Forbidden. Admin privileges required to generate keys.' });
+        // 🔥 THE FIX: Ultra-strict context validation before hitting the database
+        if (!req.user || !req.user.workspaceId) {
+            res.status(401).json({ success: false, message: 'Fatal: Workspace context missing. Cannot generate key.' });
             return;
         }
 
+        const { name } = req.body;
+
         if (!name) {
-            res.status(400).json({ success: false, message: 'API Key integration name is strictly required.' });
+            res.status(400).json({ success: false, message: 'API Key name is required for identification.' });
             return;
         }
 
@@ -24,78 +23,59 @@ export const generateApiKey = async (req: AuthRequest, res: Response): Promise<v
 
         const newApiKey = await prisma.apiKey.create({
             data: {
-                workspace: { connect: { id: workspaceId } },
                 name,
-                key: secureApiKey
+                key: secureApiKey,
+                // Passing verified string explicitly to prevent undefined crashes
+                workspace: { connect: { id: String(req.user.workspaceId) } }
             }
         });
 
-        res.status(201).json({
-            success: true,
-            message: 'API Key generated successfully. Save this key now, it will not be shown again.',
-            data: newApiKey
-        });
+        res.status(201).json({ success: true, data: newApiKey });
     } catch (error: any) {
-        console.error('[CRITICAL PRISMA ERROR] Generate API Key:', error);
-        res.status(500).json({ success: false, message: 'Internal Server Error while generating API Key.' });
+        console.error('[API KEY GENERATION ERROR]', error);
+        res.status(500).json({ success: false, message: 'Failed to provision secure API Key.' });
     }
 };
 
 export const getApiKeys = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const workspaceId = req.workspaceId!;
-        const requestingUserRole = req.user.role;
-
-        if (requestingUserRole !== 'OWNER' && requestingUserRole !== 'ADMIN') {
-            res.status(403).json({ success: false, message: 'Forbidden. Admin privileges required to view keys.' });
+        if (!req.user || !req.user.workspaceId) {
+            res.status(401).json({ success: false, message: 'Context missing.' });
             return;
         }
 
-        const apiKeys = await prisma.apiKey.findMany({
-            where: { workspaceId },
+        const keys = await prisma.apiKey.findMany({
+            where: { workspaceId: req.user.workspaceId },
             orderBy: { createdAt: 'desc' }
         });
 
-        // STRICT TYPE FIX: Added :any to prevent implicit any errors when Prisma cache fails
-        const maskedKeys = apiKeys.map((keyObj: any) => ({
-            ...keyObj,
-            key: `fb_live_...${keyObj.key.slice(-6)}`
-        }));
-
-        res.status(200).json({ success: true, data: maskedKeys });
+        res.status(200).json({ success: true, data: keys });
     } catch (error: any) {
-        console.error('[CRITICAL PRISMA ERROR] Fetch API Keys:', error);
-        res.status(500).json({ success: false, message: 'Internal Server Error while fetching API Keys.' });
+        console.error('[API KEY FETCH ERROR]', error);
+        res.status(500).json({ success: false, message: 'Failed to retrieve active API keys.' });
     }
 };
 
-export const revokeApiKey = async (req: AuthRequest, res: Response): Promise<void> => {
+export const deleteApiKey = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const workspaceId = req.workspaceId!;
-        const keyId = req.params.id as string;
-        const requestingUserRole = req.user.role;
-
-        if (requestingUserRole !== 'OWNER' && requestingUserRole !== 'ADMIN') {
-            res.status(403).json({ success: false, message: 'Forbidden. Admin privileges required to revoke keys.' });
+        if (!req.user || !req.user.workspaceId) {
+            res.status(401).json({ success: false, message: 'Context missing.' });
             return;
         }
 
-        const existingKey = await prisma.apiKey.findFirst({
-            where: { id: keyId, workspaceId }
-        });
+        const id = String(req.params.id);
 
-        if (!existingKey) {
-            res.status(404).json({ success: false, message: 'API Key not found or unauthorized.' });
+        const existingKey = await prisma.apiKey.findUnique({ where: { id } });
+        if (!existingKey || existingKey.workspaceId !== req.user.workspaceId) {
+            res.status(404).json({ success: false, message: 'API Key not found or access denied.' });
             return;
         }
 
-        await prisma.apiKey.delete({
-            where: { id: keyId }
-        });
+        await prisma.apiKey.delete({ where: { id } });
 
-        res.status(200).json({ success: true, message: 'API Key permanently revoked and destroyed.' });
+        res.status(200).json({ success: true, message: 'API Key revoked successfully.' });
     } catch (error: any) {
-        console.error('[CRITICAL PRISMA ERROR] Revoke API Key:', error);
-        res.status(500).json({ success: false, message: 'Internal Server Error while revoking API Key.' });
+        console.error('[API KEY DELETE ERROR]', error);
+        res.status(500).json({ success: false, message: 'Failed to revoke API key.' });
     }
 };

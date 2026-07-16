@@ -19,6 +19,7 @@ import inviteRoutes from './routes/inviteRoutes';
 import apiKeyRoutes from './routes/apiKeyRoutes'; 
 import webhookRoutes from './routes/webhookRoutes';
 import adminRoutes from './routes/adminRoutes';
+import announcementRoutes from './routes/announcementRoutes';
 
 const app = express();
 
@@ -73,6 +74,7 @@ app.use('/api/invites', inviteRoutes);
 app.use('/api/apikeys', apiKeyRoutes); 
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/announcements', announcementRoutes);
 
 // ==========================================
 // START THE ENGINE

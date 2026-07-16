@@ -9,7 +9,8 @@ export const createCompany = async (req: AuthRequest, res: Response): Promise<vo
             return;
         }
 
-        const { name, domain, industry, revenue } = req.body;
+        // 🔥 FIX: Only taking what is ACTUALLY in your database schema!
+        const { name, website, address } = req.body;
 
         if (!name) {
             res.status(400).json({ success: false, message: 'Company name is required.' });
@@ -19,9 +20,8 @@ export const createCompany = async (req: AuthRequest, res: Response): Promise<vo
         const company = await prisma.company.create({
             data: {
                 name,
-                domain: domain || '',
-                industry: industry || 'Other',
-                revenue: revenue ? parseFloat(revenue) : 0,
+                website: website || '',
+                address: address || '', // Using address instead of industry
                 workspace: { connect: { id: req.user.workspaceId } }
             }
         });
@@ -43,7 +43,6 @@ export const getCompanies = async (req: AuthRequest, res: Response): Promise<voi
         const companies = await prisma.company.findMany({
             where: { workspaceId: req.user.workspaceId },
             include: {
-                // 🔥 THE FIX: Changed 'leads' to 'contacts' based on your Prisma Schema
                 _count: { select: { contacts: true, deals: true } }
             },
             orderBy: { createdAt: 'desc' }

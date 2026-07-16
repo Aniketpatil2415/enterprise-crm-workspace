@@ -21,9 +21,8 @@ export const createTask = async (req: AuthRequest, res: Response): Promise<void>
                 title,
                 description: description || '',
                 dueDate: dueDate ? new Date(dueDate) : null,
-                isCompleted: false,
+                // 🔥 FIX: Removed 'isCompleted' because your schema doesn't use it.
                 workspace: { connect: { id: req.user.workspaceId } },
-                // Assign to specific user or self
                 assignee: { connect: { id: assignedToId || req.user.id } }
             }
         });
